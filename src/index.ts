@@ -1,53 +1,192 @@
-import express from 'express';
-import * as admin from 'firebase-admin';
-import cron from 'node-cron';
-import { onPostCreate } from './triggers/onPostCreate';
-import { recalculatePanicLevels } from './panicRecalculator';
-import { sendDailyNotifications } from './notifications';
+import express from "express";
+import * as admin from "firebase-admin";
+import cron from "node-cron";
+import { recalculatePanicLevels } from "./panicRecalculator";
+import { sendDailyNotifications } from "./notifications";
 
+// --------------------
+// App Setup
+// --------------------
 const app = express();
 app.use(express.json());
 
-// Initialize Firebase
+// --------------------
+// Firebase Init
+// --------------------
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-// 🕒 Daily Task Audit (Midnight)
-cron.schedule('0 0 * * *', async () => {
-  console.log("🕒 [CampusConnect] Running Daily Task Audit...");
+const db = admin.firestore();
+
+// --------------------
+// CRON: Daily Panic + Notifications
+// --------------------
+cron.schedule("0 0 * * *", async () => {
+  console.log("🕒 [CampusConnect] Running daily audit...");
   await recalculatePanicLevels();
   await sendDailyNotifications();
 });
 
-// 📥 API: Create Task from Student Post
-app.post('/api/posts', async (req, res) => {
+// --------------------
+// API: Create Post
+// --------------------
+app.post("/api/posts", async (req, res) => {
   try {
-    const postData = req.body;
-    console.log("📩 [CampusConnect] New post received:", postData.title);
-    await onPostCreate(postData); 
-    res.status(200).send({ 
-        status: "success", 
-        message: "CampusConnect: Task created successfully!" 
+    const {
+      communityId,
+      type,
+      title,
+      description,
+      date,
+      deadline
+    } = req.body;
+
+    if (!communityId || !type || !title || !description) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields"
+      });
+    }
+
+    const postRef = await db
+      .collection("communities")
+      .doc(communityId)
+      .collection("posts")
+      .add({
+        type,
+        title,
+        description,
+        date: date || null,
+        deadline: deadline || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+    res.status(201).json({
+      success: true,
+      postId: postRef.id,
+      message: "Post created successfully"
     });
   } catch (error) {
-    console.error("❌ Error:", error);
-    res.status(500).send({ status: "error", message: "Failed to create task" });
+    console.error("❌ Error creating post:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
   }
 });
 
-// 🌐 Health Check
-app.get('/', (req, res) => {
-    res.send('🚀 CampusConnect Backend is Live and Healthy!');
+// --------------------
+// API: Get Posts by Community
+// --------------------
+app.get("/api/posts", async (req, res) => {
+  try {
+    const { communityId } = req.query;
+
+    if (!communityId) {
+      return res.status(400).json({
+        success: false,
+        error: "communityId is required"
+      });
+    }
+
+    const snapshot = await db
+      .collection("communities")
+      .doc(String(communityId))
+      .collection("posts")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const posts = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    res.json({
+      success: true,
+      posts
+    });
+  } catch (error) {
+    console.error("❌ Error fetching posts:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
 });
 
-// 🛠️ Debug Route: Manually trigger color recalculation
-app.post('/api/debug-audit', async (req, res) => {
-  await recalculatePanicLevels();
-  res.send({ message: "CampusConnect: Panic levels updated!" });
+// --------------------
+// Global Lounge: Send Message
+// --------------------
+app.post("/api/lounge/message", async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: "Message text required"
+      });
+    }
+
+    await db.collection("globalLounge").add({
+      text,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Message sent"
+    });
+  } catch (error) {
+    console.error("❌ Lounge error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
 });
 
+// --------------------
+// Global Lounge: Get Messages
+// --------------------
+app.get("/api/lounge/messages", async (_req, res) => {
+  try {
+    const snapshot = await db
+      .collection("globalLounge")
+      .orderBy("createdAt", "desc")
+      .limit(50)
+      .get();
+
+    const messages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    res.json({
+      success: true,
+      messages
+    });
+  } catch (error) {
+    console.error("❌ Lounge fetch error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error"
+    });
+  }
+});
+
+// --------------------
+// Health Check
+// --------------------
+app.get("/", (_req, res) => {
+  res.send("🚀 CampusConnect Backend is Live and Healthy!");
+});
+
+// --------------------
+// Server Start (Railway compatible)
+// --------------------
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`📡 [CampusConnect] Server is running on port ${PORT}`);
+  console.log(`📡 [CampusConnect] Server running on port ${PORT}`);
 });
