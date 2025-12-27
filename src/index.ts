@@ -2,7 +2,6 @@ import "dotenv/config";
 import express from "express";
 import * as admin from "firebase-admin";
 import cron from "node-cron";
-export { postToTask } from "./triggers/postToTask";
 import { recalculatePanicLevels } from "./panicRecalculator";
 import { sendDailyNotifications } from "./notifications";
 import { loungeTLDR } from "./routes/loungeTLDR";
@@ -14,19 +13,28 @@ const app = express();
 app.use(express.json());
 
 // --------------------
-// Firebase Init (ONLY ONCE)
+// Firebase Init (Environment Aware)
 // --------------------
+let serviceAccount: any;
 
-import serviceAccount from "../serviceAccountKey.json";
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(
-      serviceAccount as admin.ServiceAccount
-    ),
-  });
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // For Railway: Use the Environment Variable
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    // For Local: Use the physical file
+    // We use require instead of import to prevent tsc from crashing during build
+    serviceAccount = require("../serviceAccountKey.json");
+  }
+} catch (error) {
+  console.warn("⚠️ Firebase service account not found. Ensure FIREBASE_SERVICE_ACCOUNT is set in Railway variables.");
 }
 
+if (!admin.apps.length && serviceAccount) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 const db = admin.firestore();
 
@@ -44,20 +52,10 @@ cron.schedule("0 0 * * *", async () => {
 // --------------------
 app.post("/api/posts", async (req, res) => {
   try {
-    const {
-      communityId,
-      type,
-      title,
-      description,
-      date,
-      deadline
-    } = req.body;
+    const { communityId, type, title, description, date, deadline } = req.body;
 
     if (!communityId || !type || !title || !description) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing required fields"
-      });
+      return res.status(400).json({ success: false, error: "Missing required fields" });
     }
 
     const postRef = await db
@@ -73,17 +71,10 @@ app.post("/api/posts", async (req, res) => {
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-    res.status(201).json({
-      success: true,
-      postId: postRef.id,
-      message: "Post created successfully"
-    });
+    res.status(201).json({ success: true, postId: postRef.id, message: "Post created successfully" });
   } catch (error) {
     console.error("❌ Error creating post:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error"
-    });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
@@ -93,12 +84,8 @@ app.post("/api/posts", async (req, res) => {
 app.get("/api/posts", async (req, res) => {
   try {
     const { communityId } = req.query;
-
     if (!communityId) {
-      return res.status(400).json({
-        success: false,
-        error: "communityId is required"
-      });
+      return res.status(400).json({ success: false, error: "communityId is required" });
     }
 
     const snapshot = await db
@@ -108,21 +95,11 @@ app.get("/api/posts", async (req, res) => {
       .orderBy("createdAt", "desc")
       .get();
 
-    const posts = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    res.json({
-      success: true,
-      posts
-    });
+    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json({ success: true, posts });
   } catch (error) {
     console.error("❌ Error fetching posts:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error"
-    });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
@@ -132,12 +109,8 @@ app.get("/api/posts", async (req, res) => {
 app.post("/api/lounge/message", async (req, res) => {
   try {
     const { text } = req.body;
-
     if (!text) {
-      return res.status(400).json({
-        success: false,
-        error: "Message text required"
-      });
+      return res.status(400).json({ success: false, error: "Message text required" });
     }
 
     await db.collection("globalLounge").add({
@@ -145,16 +118,10 @@ app.post("/api/lounge/message", async (req, res) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Message sent"
-    });
+    res.status(201).json({ success: true, message: "Message sent" });
   } catch (error) {
     console.error("❌ Lounge error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error"
-    });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
@@ -169,21 +136,11 @@ app.get("/api/lounge/messages", async (_req, res) => {
       .limit(50)
       .get();
 
-    const messages = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-
-    res.json({
-      success: true,
-      messages
-    });
+    const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json({ success: true, messages });
   } catch (error) {
     console.error("❌ Lounge fetch error:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error"
-    });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
