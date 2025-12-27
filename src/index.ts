@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
@@ -5,6 +6,7 @@ import cron from "node-cron";
 
 import { recalculatePanicLevels } from "./panicRecalculator";
 import { sendDailyNotifications } from "./notifications";
+import { loungeTLDR } from "./routes/loungeTLDR";
 
 const app = express();
 
@@ -28,11 +30,9 @@ app.use(express.json());
    ======================= */
 import serviceAccount from "../serviceAccountKey.json";
 
-if (!admin.apps.length) {
+if (!admin.apps.length && serviceAccount) {
   admin.initializeApp({
-    credential: admin.credential.cert(
-      serviceAccount as admin.ServiceAccount
-    ),
+    credential: admin.credential.cert(serviceAccount),
   });
 }
 
@@ -59,6 +59,10 @@ app.post("/api/posts", async (req, res) => {
         success: false,
         error: "Missing fields",
       });
+    const { communityId, type, title, description, date, deadline } = req.body;
+
+    if (!communityId || !type || !title || !description) {
+      return res.status(400).json({ success: false, error: "Missing required fields" });
     }
 
     const postRef = await db
@@ -78,15 +82,19 @@ app.post("/api/posts", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false });
+    res.status(201).json({ success: true, postId: postRef.id, message: "Post created successfully" });
+  } catch (error) {
+    console.error("❌ Error creating post:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
 app.get("/api/posts", async (req, res) => {
   try {
     const { communityId } = req.query;
-
     if (!communityId) {
       return res.status(400).json({ success: false });
+      return res.status(400).json({ success: false, error: "communityId is required" });
     }
 
     const snapshot = await db
@@ -114,9 +122,9 @@ app.get("/api/posts", async (req, res) => {
 app.post("/api/lounge/message", async (req, res) => {
   try {
     const { text } = req.body;
-
     if (!text) {
       return res.status(400).json({ success: false });
+      return res.status(400).json({ success: false, error: "Message text required" });
     }
 
     await db.collection("globalLounge").add({
@@ -128,6 +136,10 @@ app.post("/api/lounge/message", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false });
+    res.status(201).json({ success: true, message: "Message sent" });
+  } catch (error) {
+    console.error("❌ Lounge error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
@@ -154,6 +166,22 @@ app.get("/api/lounge/messages", async (_req, res) => {
 /* =======================
    HEALTH CHECK
    ======================= */
+    const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json({ success: true, messages });
+  } catch (error) {
+    console.error("❌ Lounge fetch error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// --------------------
+// Global Lounge: TL;DR Summary (Gemini)
+// --------------------
+app.get("/api/lounge/tldr", loungeTLDR);
+
+// --------------------
+// Health Check
+// --------------------
 app.get("/", (_req, res) => {
   res.send("🚀 CampusConnect Backend Live");
 });
