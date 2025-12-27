@@ -1,13 +1,14 @@
 import * as admin from "firebase-admin";
-import serviceAccount from "../serviceAccountKey.json";
+
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+  : require("../serviceAccountKey.json"); // Fallback for local development
 
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-    projectId: serviceAccount.project_id
+    credential: admin.credential.cert(serviceAccount),
   });
 }
 
-const db = admin.firestore();
-
-export { admin, db };
+export const db = admin.firestore();
+export { admin };
