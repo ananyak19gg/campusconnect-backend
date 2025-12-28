@@ -1,89 +1,40 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/router";
 
-const API = process.env.NEXT_PUBLIC_BACKEND_URL;
+export default function Login() {
+  const [name, setName] = useState("");
+  const router = useRouter();
 
-export default function Home() {
-  const [posts, setPosts] = useState([]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  const fetchPosts = async () => {
-    try {
-      const res = await fetch(`${API}/api/posts?communityId=general`);
-      const data = await res.json();
-      if (data.success) setPosts(data.posts);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+  const handleLogin = () => {
+    if (!name) return;
+    localStorage.setItem("username", name);
+    router.push("/lounge");
   };
-
-  const createPost = async () => {
-    if (!title || !description) return;
-
-    await fetch(`${API}/api/posts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        communityId: "general",
-        type: "text",
-        title,
-        description
-      })
-    });
-
-    setTitle("");
-    setDescription("");
-    fetchPosts();
-  };
-
-  useEffect(() => {
-    fetchPosts();
-  }, []);
 
   return (
-    <div className="min-h-screen bg-bg p-6">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-primary mb-6">
-          🌍 CampusConnect – Global Lounge
+    <div className="min-h-screen flex items-center justify-center bg-bg">
+      <div className="bg-card p-8 rounded-xl shadow-soft w-full max-w-md">
+        <h1 className="text-3xl font-bold text-primary mb-4 text-center">
+          🌍 CampusConnect
         </h1>
 
-        {/* Create Post */}
-        <div className="bg-card shadow-soft rounded-xl p-4 mb-6">
-          <input
-            className="w-full border p-2 rounded mb-2"
-            placeholder="Post title"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-          />
-          <textarea
-            className="w-full border p-2 rounded mb-2"
-            placeholder="What's happening on campus?"
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-          />
-          <button
-            onClick={createPost}
-            className="bg-primary text-white px-4 py-2 rounded hover:opacity-90"
-          >
-            Post
-          </button>
-        </div>
+        <p className="text-muted text-center mb-6">
+          Enter Global Campus Lounge
+        </p>
 
-        {/* Feed */}
-        {loading && <p>Loading feed…</p>}
+        <input
+          className="w-full border p-3 rounded mb-4"
+          placeholder="Enter your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
-        {posts.map(post => (
-          <div
-            key={post.id}
-            className="bg-card shadow-soft rounded-xl p-4 mb-4"
-          >
-            <h3 className="font-semibold text-lg">{post.title}</h3>
-            <p className="text-muted mt-1">{post.description}</p>
-          </div>
-        ))}
+        <button
+          onClick={handleLogin}
+          className="w-full bg-primary text-white py-3 rounded hover:opacity-90"
+        >
+          Enter Lounge →
+        </button>
       </div>
     </div>
   );
