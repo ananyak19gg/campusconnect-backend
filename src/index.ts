@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
 import cron from "node-cron";
-
 import { recalculatePanicLevels } from "./panicRecalculator";
 import { sendDailyNotifications } from "./notifications";
 
@@ -23,16 +22,13 @@ app.use(
 
 app.use(express.json());
 
-/* =======================
-   Firebase Init
-   ======================= */
-import serviceAccount from "../serviceAccountKey.json";
-
 if (!admin.apps.length) {
+  const serviceAccount = JSON.parse(
+    process.env.FIREBASE_SERVICE_ACCOUNT as string
+  );
+
   admin.initializeApp({
-    credential: admin.credential.cert(
-      serviceAccount as admin.ServiceAccount
-    ),
+    credential: admin.credential.cert(serviceAccount),
   });
 }
 
