@@ -5,6 +5,11 @@ It helps students stay organized and mentally at ease by converting posts and di
 
 Instead of adding pressure, CampusConnect reduces cognitive overload.
 
+---
+## Live Demo
+click: https://campusconnectivity.netlify.app
+---
+
 <h2>🎯 Problem Statement</h2>
 
 College students often face avoidable stress because:
@@ -16,7 +21,7 @@ College students often face avoidable stress because:
 Most platforms focus on activity.
 CampusConnect focuses on clarity.
 
---
+---
 
 <h2>🛠️ Our Approach</h2>
 
@@ -28,9 +33,9 @@ CampusConnect works by:
 - Keeping the system calm — no forced help, no pressure loops
 The aim is support without stress.
 
---
+---
 
-<h3>🌟 Core Features</h3>
+<h2>🌟 Core Features</h2>
 
 * 📝 Post → Task conversion
 * 🚦 Panic Levels (🟢 Calm / 🟡 Alert / 🔴 Urgent)
@@ -40,9 +45,9 @@ The aim is support without stress.
 * ⏱️ Optional focus timers
 * 🧘 Stress-aware UX philosophy
 
---
-
-<h3>🧰 Tech Stack</h3>
+ --- 
+  
+<h2>🧰 Tech Stack</h2>
 
 Frontend
 - React / Next.js
@@ -62,9 +67,9 @@ Database
 - Cloud Firestore
 - Structured collections & rules
 
---
+---
 
-<h3>🔀 System Flow</h3>
+<h2>🔀 System Flow</h2>
 
 1. Campus post is created
 2. Post content is analyzed
@@ -74,7 +79,7 @@ Database
 6. Lounge messages accumulate
 7. AI generates a TL;DR when a student returns
 
---
+---
 
 <h2>👥 Team Members & Contributions</h2>
 
@@ -103,19 +108,26 @@ Database
 * Implemented frontend layouts and components
 * Focused on clean, calm, and accessible UX
 * Ensured design aligned with stress-aware principles
---
+
+---
 
 <h2> ⚙️ Project Setup (Backend) </h2>
 1️⃣ Clone the Repository
+
+```bash
 git clone <backend-repo-url>
 cd CampusConnect-Backend
+```
 
 2️⃣ Install Dependencies
+
+```bash
 npm install
+```
 
 3️⃣ Environment Variables
 
-Create a .env file:
+Create a .`env `file:
 
 GEMINI_API_KEY=your_gemini_api_key
 
@@ -123,53 +135,52 @@ GEMINI_API_KEY=your_gemini_api_key
 ⚠️ Do not commit .env or service account keys.
 
 4️⃣ Run the Server
+```bash
 npm run build
 npm start
+```
 
-
-Server runs at:
-
+Server runs locally at:
 http://localhost:8080
+
+---
 
 <h2>🎬 Demo Overview</h2>
 
 The demo includes:
 
-Creating campus posts
+* Creating campus posts
+* Automatic task creation
+* Panic level transitions
+* Smart notifications
+* AI-generated TL;DR for lounge messages
 
-Automatic task creation
-
-Panic level transitions
-
-Smart notifications
-
-AI-generated TL;DR for lounge messages
+---
 
 <h2>📈 Key Learnings</h2>
 
-Designing stress-aware systems
+- Designing stress-aware systems
+- Backend-first architecture thinking
+- Real-world AI integration (Gemini)
+- Secure Firestore modeling
+- Team-based modular development
+- Debugging cloud auth & environment issues
 
-Backend-first architecture thinking
+---
 
-Real-world AI integration (Gemini)
-
-Secure Firestore modeling
-
-Team-based modular development
-
-Debugging cloud auth & environment issues
-
-📄 License
+## 📄 License
 
 Open-source project for educational and hackathon use.
 
-🙌 Acknowledgements
+---
 
-Hackathon organizers and mentors
+## 🙌 Acknowledgements
 
-Google Cloud & Firebase
+* Hackathon organizers and mentors
+* Google Cloud & Firebase
+* Peer reviewers and testers
 
-Peer reviewers and testers
+---
 
-CampusConnect
+## CampusConnect
 Clarity over chaos. Calm over clutter.
